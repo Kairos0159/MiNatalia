@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setupAnimations();
         setupPDFViewers();
         setupVideoPlayers();
+        setupResponsiveBehavior();
     }
     
     // ===== AÑO ACTUAL =====
@@ -44,12 +45,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // ===== NAVEGACIÓN =====
     function setupNavigation() {
         // Toggle del menú móvil
-        menuToggle.addEventListener('click', function() {
-            navMenu.classList.toggle('active');
-            this.innerHTML = navMenu.classList.contains('active') 
-                ? '<i class="fas fa-times"></i>' 
-                : '<i class="fas fa-bars"></i>';
-        });
+        if (menuToggle) {
+            menuToggle.addEventListener('click', function() {
+                navMenu.classList.toggle('active');
+                this.innerHTML = navMenu.classList.contains('active') 
+                    ? '<i class="fas fa-times"></i>' 
+                    : '<i class="fas fa-bars"></i>';
+            });
+        }
         
         // Navegación entre secciones
         navLinks.forEach(link => {
@@ -59,7 +62,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Cerrar menú móvil si está abierto
                 if (navMenu.classList.contains('active')) {
                     navMenu.classList.remove('active');
-                    menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
+                    if (menuToggle) {
+                        menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
+                    }
                 }
                 
                 // Obtener la sección objetivo
@@ -74,17 +79,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Desplazamiento suave
                 setTimeout(() => {
-                    document.getElementById(targetId).scrollIntoView({ 
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
                 }, 300);
             });
         });
         
         // Cerrar menú al hacer clic fuera
         document.addEventListener('click', function(e) {
-            if (!menuToggle.contains(e.target) && !navMenu.contains(e.target)) {
+            if (menuToggle && !menuToggle.contains(e.target) && navMenu && !navMenu.contains(e.target)) {
                 navMenu.classList.remove('active');
                 menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
             }
@@ -112,7 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ===== ANIMAR ELEMENTOS DE SECCIÓN =====
     function animateSectionElements(section) {
-        const animatedElements = section.querySelectorAll('.pdf-card, .video-card, .link-card, .stat-card');
+        const animatedElements = section.querySelectorAll('.pdf-card, .video-card, .link-card, .stat-card, .gallery-item');
         animatedElements.forEach((element, index) => {
             element.style.opacity = '0';
             element.style.transform = 'translateY(20px)';
@@ -127,6 +135,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ===== CARRUSEL MEJORADO =====
     function setupCarrusel() {
+        if (!carruselTrack || !prevBtn || !nextBtn) return;
+        
         // Configurar dimensiones iniciales
         updateCarruselDimensions();
         
@@ -176,9 +186,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Pausar autoavance al interactuar
         const carruselContainer = document.querySelector('.carrusel-container-large');
-        carruselContainer.addEventListener('mouseenter', pauseAutoAdvance);
-        carruselContainer.addEventListener('touchstart', pauseAutoAdvance);
-        carruselContainer.addEventListener('mouseleave', startAutoAdvance);
+        if (carruselContainer) {
+            carruselContainer.addEventListener('mouseenter', pauseAutoAdvance);
+            carruselContainer.addEventListener('touchstart', pauseAutoAdvance);
+            carruselContainer.addEventListener('mouseleave', startAutoAdvance);
+        }
         
         // Actualizar dimensiones en resize
         window.addEventListener('resize', updateCarruselDimensions);
@@ -188,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function navigateCarrusel(direction) {
-        if (isTransitioning) return;
+        if (isTransitioning || !carruselTrack) return;
         
         isTransitioning = true;
         const newSlide = (currentSlide + direction + totalSlides) % totalSlides;
@@ -203,7 +215,9 @@ document.addEventListener('DOMContentLoaded', function() {
         currentSlide = slideIndex;
         
         // Actualizar posición del track
-        carruselTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+        if (carruselTrack) {
+            carruselTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+        }
         
         // Actualizar indicadores
         indicators.forEach((indicator, index) => {
@@ -218,16 +232,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateSlideCounter() {
-        slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        if (slideCounter) {
+            slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        }
     }
     
     function updateCarruselDimensions() {
         const container = document.querySelector('.carrusel-container-large');
         const slides = document.querySelectorAll('.carrusel-slide-large');
         
-        slides.forEach(slide => {
-            slide.style.minWidth = `${container.offsetWidth}px`;
-        });
+        if (container && slides.length > 0) {
+            slides.forEach(slide => {
+                slide.style.minWidth = `${container.offsetWidth}px`;
+            });
+        }
     }
     
     function startAutoAdvance() {
@@ -247,6 +265,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ===== SCROLL TOP =====
     function setupScrollTop() {
+        if (!scrollTopBtn) return;
+        
         window.addEventListener('scroll', () => {
             if (window.pageYOffset > 300) {
                 scrollTopBtn.classList.add('visible');
@@ -264,26 +284,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // ===== TEMA OSCURO/CLARO =====
-    themeToggle.addEventListener('click', function() {
-        if (body.classList.contains('light-mode')) {
-            body.classList.remove('light-mode');
-            body.classList.add('dark-mode');
-            localStorage.setItem('theme', 'dark');
-            this.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
-        } else {
-            body.classList.remove('dark-mode');
-            body.classList.add('light-mode');
-            localStorage.setItem('theme', 'light');
-            this.innerHTML = '<i class="fas fa-moon"></i><span>Modo Noche</span>';
-        }
-    });
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+                this.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
+            } else {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+                this.innerHTML = '<i class="fas fa-moon"></i><span>Modo Noche</span>';
+            }
+        });
+    }
     
     // Cargar tema guardado
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         body.classList.remove('light-mode');
         body.classList.add('dark-mode');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
+        if (themeToggle) {
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
+        }
     }
     
     // ===== FORMULARIO DE CONTACTO =====
@@ -308,6 +332,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function validateForm() {
+        if (!contactForm) return false;
+        
         let isValid = true;
         const inputs = contactForm.querySelectorAll('input, textarea, select');
         
@@ -376,6 +402,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function simulateFormSubmission() {
         const submitBtn = contactForm.querySelector('.btn-submit');
+        if (!submitBtn) return;
+        
         const originalText = submitBtn.innerHTML;
         
         // Mostrar estado de carga
@@ -421,6 +449,8 @@ document.addEventListener('DOMContentLoaded', function() {
             box-shadow: var(--shadow-lg);
             z-index: 1000;
             animation: slideInRight 0.3s ease;
+            max-width: 90%;
+            word-wrap: break-word;
         `;
         
         document.body.appendChild(notification);
@@ -449,17 +479,19 @@ document.addEventListener('DOMContentLoaded', function() {
             rootMargin: '0px 0px -50px 0px'
         };
         
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('animated');
-                }
-            });
-        }, observerOptions);
-        
-        // Observar elementos para animar
-        const animatableElements = document.querySelectorAll('.pdf-card, .video-card, .link-card, .stat-card, .gallery-item');
-        animatableElements.forEach(el => observer.observe(el));
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animated');
+                    }
+                });
+            }, observerOptions);
+            
+            // Observar elementos para animar
+            const animatableElements = document.querySelectorAll('.pdf-card, .video-card, .link-card, .stat-card, .gallery-item');
+            animatableElements.forEach(el => observer.observe(el));
+        }
         
         // Añadir estilos CSS para animaciones
         const style = document.createElement('style');
@@ -491,23 +523,27 @@ document.addEventListener('DOMContentLoaded', function() {
             // Añadir mensaje de carga
             iframe.onload = function() {
                 const parent = iframe.parentNode;
-                parent.classList.remove('loading');
+                if (parent) {
+                    parent.classList.remove('loading');
+                }
             };
             
             // Manejar errores
             iframe.onerror = function() {
                 const parent = iframe.parentNode;
-                parent.classList.remove('loading');
-                parent.innerHTML = `
-                    <div class="pdf-error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h4>No se pudo cargar el PDF</h4>
-                        <p>El archivo no está disponible o hubo un error al cargarlo.</p>
-                        <a href="${iframe.src}" class="btn" target="_blank">
-                            <i class="fas fa-external-link-alt"></i> Abrir en nueva pestaña
-                        </a>
-                    </div>
-                `;
+                if (parent) {
+                    parent.classList.remove('loading');
+                    parent.innerHTML = `
+                        <div class="pdf-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h4>No se pudo cargar el PDF</h4>
+                            <p>El archivo no está disponible o hubo un error al cargarlo.</p>
+                            <a href="${iframe.src}" class="btn" target="_blank">
+                                <i class="fas fa-external-link-alt"></i> Abrir en nueva pestaña
+                            </a>
+                        </div>
+                    `;
+                }
             };
         });
     }
@@ -531,6 +567,50 @@ document.addEventListener('DOMContentLoaded', function() {
                 video.removeAttribute('autoplay');
             }
         });
+    }
+    
+    // ===== COMPORTAMIENTO RESPONSIVE =====
+    function setupResponsiveBehavior() {
+        // Ajustar texto del botón de tema en móviles
+        function adjustThemeButtonText() {
+            if (!themeToggle) return;
+            
+            if (window.innerWidth <= 768) {
+                // En móviles, solo mostrar icono
+                const icon = themeToggle.querySelector('i');
+                if (icon) {
+                    themeToggle.innerHTML = icon.outerHTML;
+                }
+            } else {
+                // En escritorio, restaurar texto completo
+                const isDarkMode = body.classList.contains('dark-mode');
+                themeToggle.innerHTML = isDarkMode 
+                    ? '<i class="fas fa-sun"></i><span>Modo Día</span>'
+                    : '<i class="fas fa-moon"></i><span>Modo Noche</span>';
+            }
+        }
+        
+        // Ajustar menú en resize
+        function handleResize() {
+            adjustThemeButtonText();
+            
+            // Ocultar menú móvil en pantallas grandes
+            if (window.innerWidth > 768 && navMenu) {
+                navMenu.classList.remove('active');
+                if (menuToggle) {
+                    menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
+                }
+            }
+            
+            // Actualizar carrusel
+            updateCarruselDimensions();
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', handleResize);
+        
+        // Inicializar
+        adjustThemeButtonText();
     }
     
     // ===== INICIALIZAR TODO =====
