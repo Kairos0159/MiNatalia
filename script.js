@@ -23,9 +23,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalSlides = carruselSlides.length;
     let carruselInterval;
     let isTransitioning = false;
+    let isMenuOpen = false;
     
     // ===== FUNCIONES DE INICIALIZACIÓN =====
     function init() {
+        console.log('Inicializando aplicación...');
+        
+        // Verificar que los elementos críticos existen
+        if (!menuToggle || !navMenu) {
+            console.warn('Elementos del menú no encontrados');
+        }
+        
         setCurrentYear();
         setupNavigation();
         setupCarrusel();
@@ -34,61 +42,171 @@ document.addEventListener('DOMContentLoaded', function() {
         setupAnimations();
         setupPDFViewers();
         setupVideoPlayers();
+        
+        // Forzar la sección de inicio al cargar
+        setTimeout(() => {
+            showSection('inicio');
+        }, 100);
     }
     
     // ===== AÑO ACTUAL =====
     function setCurrentYear() {
-        currentYear.textContent = new Date().getFullYear();
+        if (currentYear) {
+            currentYear.textContent = new Date().getFullYear();
+        }
     }
     
-    // ===== NAVEGACIÓN =====
+    // ===== NAVEGACIÓN CORREGIDA =====
     function setupNavigation() {
-        // Toggle del menú móvil
-        menuToggle.addEventListener('click', function() {
-            navMenu.classList.toggle('active');
-            this.innerHTML = navMenu.classList.contains('active') 
-                ? '<i class="fas fa-times"></i>' 
-                : '<i class="fas fa-bars"></i>';
-        });
-        
-        // Navegación entre secciones
-        navLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
+        // 1. TOGGLE DEL MENÚ MÓVIL - FIXED
+        if (menuToggle && navMenu) {
+            menuToggle.addEventListener('click', function(e) {
                 e.preventDefault();
-                
-                // Cerrar menú móvil si está abierto
-                if (navMenu.classList.contains('active')) {
-                    navMenu.classList.remove('active');
-                    menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
-                }
-                
-                // Obtener la sección objetivo
-                const targetId = this.getAttribute('href').substring(1);
-                
-                // Actualizar enlace activo
-                navLinks.forEach(navLink => navLink.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Mostrar sección activa con animación
-                showSection(targetId);
-                
-                // Desplazamiento suave
-                setTimeout(() => {
-                    document.getElementById(targetId).scrollIntoView({ 
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }, 300);
+                e.stopPropagation();
+                toggleMobileMenu();
             });
+            
+            // Cerrar menú al hacer clic en un enlace (solo móvil)
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (window.innerWidth <= 768) {
+                        e.preventDefault();
+                        
+                        // Cerrar menú primero
+                        closeMobileMenu();
+                        
+                        // Luego navegar
+                        const targetId = this.getAttribute('href').substring(1);
+                        setTimeout(() => {
+                            navigateToSection(targetId, this);
+                        }, 300);
+                    } else {
+                        // Para desktop, comportamiento normal
+                        e.preventDefault();
+                        const targetId = this.getAttribute('href').substring(1);
+                        navigateToSection(targetId, this);
+                    }
+                });
+            });
+            
+            // Cerrar menú al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (isMenuOpen && 
+                    !menuToggle.contains(e.target) && 
+                    !navMenu.contains(e.target)) {
+                    closeMobileMenu();
+                }
+            });
+            
+            // Cerrar menú con tecla ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && isMenuOpen) {
+                    closeMobileMenu();
+                }
+            });
+        } else {
+            console.error('Menu elements not found');
+        }
+        
+        // 2. NAVEGACIÓN POR SECCIONES PARA DESKTOP
+        if (navLinks.length > 0 && sections.length > 0) {
+            // Asegurar que el primer enlace esté activo al inicio
+            if (!document.querySelector('.nav-link.active')) {
+                navLinks[0].classList.add('active');
+            }
+        }
+    }
+    
+    function toggleMobileMenu() {
+        if (!navMenu || !menuToggle) return;
+        
+        if (isMenuOpen) {
+            closeMobileMenu();
+        } else {
+            openMobileMenu();
+        }
+    }
+    
+    function openMobileMenu() {
+        navMenu.style.display = 'flex';
+        setTimeout(() => {
+            navMenu.classList.add('active');
+            menuToggle.innerHTML = '<i class="fas fa-times"></i>';
+            isMenuOpen = true;
+            
+            // Añadir overlay para mejor UX
+            const overlay = document.createElement('div');
+            overlay.className = 'menu-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 998;
+                display: block;
+            `;
+            overlay.addEventListener('click', closeMobileMenu);
+            document.body.appendChild(overlay);
+            
+            // Bloquear scroll del body
+            document.body.style.overflow = 'hidden';
+        }, 10);
+    }
+    
+    function closeMobileMenu() {
+        if (!navMenu || !menuToggle) return;
+        
+        navMenu.classList.remove('active');
+        menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
+        isMenuOpen = false;
+        
+        // Remover overlay
+        const overlay = document.querySelector('.menu-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+        
+        // Restaurar scroll
+        document.body.style.overflow = '';
+        
+        setTimeout(() => {
+            if (!navMenu.classList.contains('active')) {
+                navMenu.style.display = 'none';
+            }
+        }, 300);
+    }
+    
+    function navigateToSection(sectionId, clickedLink) {
+        // Validar que la sección existe
+        const targetSection = document.getElementById(sectionId);
+        if (!targetSection) {
+            console.error(`Sección ${sectionId} no encontrada`);
+            return;
+        }
+        
+        // 1. Actualizar enlaces activos
+        navLinks.forEach(link => {
+            link.classList.remove('active');
         });
         
-        // Cerrar menú al hacer clic fuera
-        document.addEventListener('click', function(e) {
-            if (!menuToggle.contains(e.target) && !navMenu.contains(e.target)) {
-                navMenu.classList.remove('active');
-                menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
-            }
-        });
+        if (clickedLink) {
+            clickedLink.classList.add('active');
+        }
+        
+        // 2. Mostrar sección con animación
+        showSection(sectionId);
+        
+        // 3. Scroll suave (solo si no es móvil con menú abierto)
+        if (window.innerWidth > 768 || !isMenuOpen) {
+            setTimeout(() => {
+                targetSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 100);
+        }
     }
     
     // ===== MOSTRAR SECCIÓN CON ANIMACIÓN =====
@@ -96,16 +214,18 @@ document.addEventListener('DOMContentLoaded', function() {
         sections.forEach(section => {
             if (section.id === sectionId) {
                 section.style.display = 'block';
-                setTimeout(() => {
+                // Pequeño delay para asegurar display
+                requestAnimationFrame(() => {
                     section.classList.add('active-section');
-                    // Animar elementos dentro de la sección
                     animateSectionElements(section);
-                }, 50);
+                });
             } else {
                 section.classList.remove('active-section');
                 setTimeout(() => {
-                    section.style.display = 'none';
-                }, 500);
+                    if (!section.classList.contains('active-section')) {
+                        section.style.display = 'none';
+                    }
+                }, 300);
             }
         });
     }
@@ -127,12 +247,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ===== CARRUSEL MEJORADO =====
     function setupCarrusel() {
+        if (!carruselTrack || carruselSlides.length === 0) {
+            console.warn('Elementos del carrusel no encontrados');
+            return;
+        }
+        
         // Configurar dimensiones iniciales
         updateCarruselDimensions();
         
         // Event listeners para botones
-        prevBtn.addEventListener('click', () => navigateCarrusel(-1));
-        nextBtn.addEventListener('click', () => navigateCarrusel(1));
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => navigateCarrusel(-1));
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => navigateCarrusel(1));
+        }
         
         // Event listeners para indicadores
         indicators.forEach((indicator, index) => {
@@ -149,14 +279,16 @@ document.addEventListener('DOMContentLoaded', function() {
         let touchStartX = 0;
         let touchEndX = 0;
         
-        carruselTrack.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-        });
-        
-        carruselTrack.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        });
+        if (carruselTrack) {
+            carruselTrack.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+            
+            carruselTrack.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, { passive: true });
+        }
         
         function handleSwipe() {
             const swipeThreshold = 50;
@@ -176,9 +308,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Pausar autoavance al interactuar
         const carruselContainer = document.querySelector('.carrusel-container-large');
-        carruselContainer.addEventListener('mouseenter', pauseAutoAdvance);
-        carruselContainer.addEventListener('touchstart', pauseAutoAdvance);
-        carruselContainer.addEventListener('mouseleave', startAutoAdvance);
+        if (carruselContainer) {
+            carruselContainer.addEventListener('mouseenter', pauseAutoAdvance);
+            carruselContainer.addEventListener('touchstart', pauseAutoAdvance);
+            carruselContainer.addEventListener('mouseleave', startAutoAdvance);
+        }
         
         // Actualizar dimensiones en resize
         window.addEventListener('resize', updateCarruselDimensions);
@@ -188,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function navigateCarrusel(direction) {
-        if (isTransitioning) return;
+        if (isTransitioning || !carruselTrack) return;
         
         isTransitioning = true;
         const newSlide = (currentSlide + direction + totalSlides) % totalSlides;
@@ -200,6 +334,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function goToSlide(slideIndex) {
+        if (slideIndex < 0 || slideIndex >= totalSlides || !carruselTrack) return;
+        
         currentSlide = slideIndex;
         
         // Actualizar posición del track
@@ -207,7 +343,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Actualizar indicadores
         indicators.forEach((indicator, index) => {
-            indicator.classList.toggle('active', index === currentSlide);
+            if (indicator) {
+                indicator.classList.toggle('active', index === currentSlide);
+            }
         });
         
         // Actualizar contador
@@ -218,19 +356,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function updateSlideCounter() {
-        slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        if (slideCounter) {
+            slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        }
     }
     
     function updateCarruselDimensions() {
         const container = document.querySelector('.carrusel-container-large');
         const slides = document.querySelectorAll('.carrusel-slide-large');
         
-        slides.forEach(slide => {
-            slide.style.minWidth = `${container.offsetWidth}px`;
-        });
+        if (container && slides.length > 0) {
+            slides.forEach(slide => {
+                slide.style.minWidth = `${container.offsetWidth}px`;
+            });
+        }
     }
     
     function startAutoAdvance() {
+        clearInterval(carruselInterval);
         carruselInterval = setInterval(() => {
             navigateCarrusel(1);
         }, 7000); // 7 segundos
@@ -247,6 +390,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ===== SCROLL TOP =====
     function setupScrollTop() {
+        if (!scrollTopBtn) return;
+        
         window.addEventListener('scroll', () => {
             if (window.pageYOffset > 300) {
                 scrollTopBtn.classList.add('visible');
@@ -264,26 +409,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // ===== TEMA OSCURO/CLARO =====
-    themeToggle.addEventListener('click', function() {
-        if (body.classList.contains('light-mode')) {
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function() {
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+                this.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
+            } else {
+                body.classList.remove('dark-mode');
+                body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+                this.innerHTML = '<i class="fas fa-moon"></i><span>Modo Noche</span>';
+            }
+        });
+        
+        // Cargar tema guardado
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
             body.classList.remove('light-mode');
             body.classList.add('dark-mode');
-            localStorage.setItem('theme', 'dark');
-            this.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
-        } else {
-            body.classList.remove('dark-mode');
-            body.classList.add('light-mode');
-            localStorage.setItem('theme', 'light');
-            this.innerHTML = '<i class="fas fa-moon"></i><span>Modo Noche</span>';
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
         }
-    });
-    
-    // Cargar tema guardado
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        body.classList.remove('light-mode');
-        body.classList.add('dark-mode');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
     }
     
     // ===== FORMULARIO DE CONTACTO =====
@@ -294,7 +441,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             if (validateForm()) {
-                // Simular envío
                 simulateFormSubmission();
             }
         });
@@ -302,8 +448,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validación en tiempo real
         const inputs = contactForm.querySelectorAll('input, textarea, select');
         inputs.forEach(input => {
-            input.addEventListener('blur', validateField);
-            input.addEventListener('input', clearError);
+            input.addEventListener('blur', function() {
+                validateField(this);
+            });
+            input.addEventListener('input', function() {
+                clearError(this);
+            });
         });
     }
     
@@ -320,8 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return isValid;
     }
     
-    function validateField(e) {
-        const field = e.target || e;
+    function validateField(field) {
         let isValid = true;
         let errorMessage = '';
         
@@ -363,8 +512,7 @@ document.addEventListener('DOMContentLoaded', function() {
         field.style.borderColor = 'var(--primary-color)';
     }
     
-    function clearError(e) {
-        const field = e.target || e;
+    function clearError(field) {
         const error = field.parentNode.querySelector('.error-message');
         
         if (error) {
@@ -398,6 +546,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // ===== NOTIFICACIONES =====
     function showNotification(message, type = 'info') {
+        // Remover notificación anterior si existe
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.innerHTML = `
@@ -429,7 +583,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const closeBtn = notification.querySelector('.notification-close');
         closeBtn.addEventListener('click', () => {
             notification.style.animation = 'slideOutRight 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
         });
         
         // Auto-remover después de 5 segundos
@@ -459,28 +617,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Observar elementos para animar
         const animatableElements = document.querySelectorAll('.pdf-card, .video-card, .link-card, .stat-card, .gallery-item');
-        animatableElements.forEach(el => observer.observe(el));
-        
-        // Añadir estilos CSS para animaciones
-        const style = document.createElement('style');
-        style.textContent = `
-            .pdf-card, .video-card, .link-card, .stat-card, .gallery-item {
-                opacity: 0;
-                transform: translateY(30px);
-                transition: opacity 0.6s ease, transform 0.6s ease;
-            }
-            
-            .pdf-card.animated, .video-card.animated, .link-card.animated, .stat-card.animated, .gallery-item.animated {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            @keyframes slideOutRight {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
+        animatableElements.forEach(el => {
+            if (el) observer.observe(el);
+        });
     }
     
     // ===== VISORES PDF =====
@@ -491,23 +630,25 @@ document.addEventListener('DOMContentLoaded', function() {
             // Añadir mensaje de carga
             iframe.onload = function() {
                 const parent = iframe.parentNode;
-                parent.classList.remove('loading');
+                if (parent) parent.classList.remove('loading');
             };
             
             // Manejar errores
             iframe.onerror = function() {
                 const parent = iframe.parentNode;
-                parent.classList.remove('loading');
-                parent.innerHTML = `
-                    <div class="pdf-error">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h4>No se pudo cargar el PDF</h4>
-                        <p>El archivo no está disponible o hubo un error al cargarlo.</p>
-                        <a href="${iframe.src}" class="btn" target="_blank">
-                            <i class="fas fa-external-link-alt"></i> Abrir en nueva pestaña
-                        </a>
-                    </div>
-                `;
+                if (parent) {
+                    parent.classList.remove('loading');
+                    parent.innerHTML = `
+                        <div class="pdf-error" style="text-align: center; padding: 2rem;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+                            <h4>No se pudo cargar el PDF</h4>
+                            <p>El archivo no está disponible o hubo un error al cargarlo.</p>
+                            <a href="${iframe.src}" class="btn" target="_blank" style="margin-top: 1rem;">
+                                <i class="fas fa-external-link-alt"></i> Abrir en nueva pestaña
+                            </a>
+                        </div>
+                    `;
+                }
             };
         });
     }
@@ -517,22 +658,81 @@ document.addEventListener('DOMContentLoaded', function() {
         const videos = document.querySelectorAll('video');
         
         videos.forEach(video => {
-            // Añadir controles personalizados si es necesario
-            video.addEventListener('play', () => {
-                video.parentNode.classList.add('playing');
-            });
-            
-            video.addEventListener('pause', () => {
-                video.parentNode.classList.remove('playing');
-            });
-            
-            // Prevenir autoplay en móviles
-            if (window.innerWidth <= 768) {
-                video.removeAttribute('autoplay');
+            if (video) {
+                // Añadir controles personalizados si es necesario
+                video.addEventListener('play', () => {
+                    video.parentNode.classList.add('playing');
+                });
+                
+                video.addEventListener('pause', () => {
+                    video.parentNode.classList.remove('playing');
+                });
+                
+                // Prevenir autoplay en móviles
+                if (window.innerWidth <= 768) {
+                    video.removeAttribute('autoplay');
+                }
             }
         });
     }
     
+    // ===== MANEJO DE RESIZE =====
+    function handleResize() {
+        // Cerrar menú si se redimensiona a desktop
+        if (window.innerWidth > 768 && isMenuOpen) {
+            closeMobileMenu();
+        }
+        
+        // Actualizar visibilidad del menú en desktop
+        if (window.innerWidth > 768 && navMenu) {
+            navMenu.style.display = 'flex';
+        } else if (window.innerWidth <= 768 && navMenu && !isMenuOpen) {
+            navMenu.style.display = 'none';
+        }
+    }
+    
+    // Event listener para resize
+    window.addEventListener('resize', handleResize);
+    
+    // Configurar menú inicial según tamaño de pantalla
+    if (window.innerWidth <= 768 && navMenu) {
+        navMenu.style.display = 'none';
+    }
+    
     // ===== INICIALIZAR TODO =====
     init();
+    
+    // Asegurar que el DOM esté completamente listo
+    setTimeout(() => {
+        // Forzar un repaint para asegurar que los estilos se apliquen
+        document.body.style.opacity = '1';
+    }, 100);
 });
+
+// Añadir soporte para navegadores antiguos
+if (!Element.prototype.closest) {
+    Element.prototype.closest = function(s) {
+        var el = this;
+        if (!document.documentElement.contains(el)) return null;
+        do {
+            if (el.matches(s)) return el;
+            el = el.parentElement || el.parentNode;
+        } while (el !== null && el.nodeType === 1);
+        return null;
+    };
+}
+
+if (!Element.prototype.matches) {
+    Element.prototype.matches = 
+        Element.prototype.matchesSelector || 
+        Element.prototype.mozMatchesSelector ||
+        Element.prototype.msMatchesSelector || 
+        Element.prototype.oMatchesSelector || 
+        Element.prototype.webkitMatchesSelector ||
+        function(s) {
+            var matches = (this.document || this.ownerDocument).querySelectorAll(s),
+                i = matches.length;
+            while (--i >= 0 && matches.item(i) !== this) {}
+            return i > -1;            
+        };
+}
