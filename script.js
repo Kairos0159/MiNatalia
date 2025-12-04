@@ -1,618 +1,273 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // ===== ELEMENTOS DEL DOM =====
+    // Obtener elementos del DOM
     const themeToggle = document.getElementById('theme-toggle');
     const body = document.body;
-    const menuToggle = document.getElementById('menu-toggle');
-    const navMenu = document.querySelector('.nav-menu');
     const navLinks = document.querySelectorAll('.nav-link');
     const sections = document.querySelectorAll('.section');
     const currentYear = document.getElementById('current-year');
-    const scrollTopBtn = document.getElementById('scroll-top');
+    const pdfButtons = document.querySelectorAll('.view-pdf');
+    const pdfViewerContainer = document.getElementById('pdf-viewer-container');
+    const closePdfBtn = document.getElementById('close-pdf');
+    const pdfTitle = document.getElementById('pdf-title');
+    const pdfViewer = document.getElementById('pdf-viewer');
     const contactForm = document.getElementById('contactForm');
     
-    // ===== CARRUSEL ELEMENTOS =====
-    const carruselTrack = document.querySelector('.carrusel-track-large');
-    const carruselSlides = document.querySelectorAll('.carrusel-slide-large');
-    const prevBtn = document.querySelector('.carrusel-btn.prev');
-    const nextBtn = document.querySelector('.carrusel-btn.next');
-    const indicators = document.querySelectorAll('.indicator-large');
-    const slideCounter = document.querySelector('.slide-counter');
+    // Configurar año actual en el footer
+    currentYear.textContent = new Date().getFullYear();
     
-    // ===== VARIABLES GLOBALES =====
-    let currentSlide = 0;
-    const totalSlides = carruselSlides.length;
-    let carruselInterval;
-    let isTransitioning = false;
+    // Crear botón hamburguesa y overlay dinámicamente
+    const nav = document.querySelector('nav');
+    const navContainer = nav.querySelector('.container');
+    const navMenu = nav.querySelector('.nav-menu');
     
-    // ===== FUNCIONES DE INICIALIZACIÓN =====
-    function init() {
-        setCurrentYear();
-        setupNavigation();
-        setupCarrusel();
-        setupScrollTop();
-        setupFormValidation();
-        setupAnimations();
-        setupPDFViewers();
-        setupVideoPlayers();
-        setupResponsiveBehavior();
-    }
+    // Crear botón hamburguesa
+    const navToggle = document.createElement('button');
+    navToggle.className = 'nav-toggle';
+    navToggle.innerHTML = '<i class="fas fa-bars"></i>';
+    navContainer.appendChild(navToggle);
     
-    // ===== AÑO ACTUAL =====
-    function setCurrentYear() {
-        currentYear.textContent = new Date().getFullYear();
-    }
+    // Crear overlay para cerrar menú
+    const navOverlay = document.createElement('div');
+    navOverlay.className = 'nav-overlay';
+    document.body.appendChild(navOverlay);
     
-    // ===== NAVEGACIÓN =====
-    function setupNavigation() {
-        // Toggle del menú móvil
-        if (menuToggle) {
-            menuToggle.addEventListener('click', function() {
-                navMenu.classList.toggle('active');
-                this.innerHTML = navMenu.classList.contains('active') 
-                    ? '<i class="fas fa-times"></i>' 
-                    : '<i class="fas fa-bars"></i>';
-            });
+    // Función para alternar menú hamburguesa
+    function toggleNavMenu() {
+        navMenu.classList.toggle('active');
+        navOverlay.classList.toggle('active');
+        document.body.style.overflow = navMenu.classList.contains('active') ? 'hidden' : 'auto';
+        
+        // Cambiar ícono del botón
+        const icon = navToggle.querySelector('i');
+        if (navMenu.classList.contains('active')) {
+            icon.className = 'fas fa-times';
+        } else {
+            icon.className = 'fas fa-bars';
         }
+    }
+    
+    // Función para cerrar menú
+    function closeNavMenu() {
+        navMenu.classList.remove('active');
+        navOverlay.classList.remove('active');
+        document.body.style.overflow = 'auto';
         
-        // Navegación entre secciones
-        navLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Cerrar menú móvil si está abierto
-                if (navMenu.classList.contains('active')) {
-                    navMenu.classList.remove('active');
-                    if (menuToggle) {
-                        menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
-                    }
-                }
-                
-                // Obtener la sección objetivo
-                const targetId = this.getAttribute('href').substring(1);
-                
-                // Actualizar enlace activo
-                navLinks.forEach(navLink => navLink.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Mostrar sección activa con animación
-                showSection(targetId);
-                
-                // Desplazamiento suave
-                setTimeout(() => {
-                    const targetElement = document.getElementById(targetId);
-                    if (targetElement) {
-                        targetElement.scrollIntoView({ 
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                }, 300);
-            });
-        });
-        
-        // Cerrar menú al hacer clic fuera
-        document.addEventListener('click', function(e) {
-            if (menuToggle && !menuToggle.contains(e.target) && navMenu && !navMenu.contains(e.target)) {
-                navMenu.classList.remove('active');
-                menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
+        // Restaurar ícono del botón
+        const icon = navToggle.querySelector('i');
+        icon.className = 'fas fa-bars';
+    }
+    
+    // Event listeners para menú hamburguesa
+    navToggle.addEventListener('click', toggleNavMenu);
+    navOverlay.addEventListener('click', closeNavMenu);
+    
+    // Cerrar menú al hacer clic en un enlace (en móviles)
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                closeNavMenu();
             }
         });
-    }
+    });
     
-    // ===== MOSTRAR SECCIÓN CON ANIMACIÓN =====
-    function showSection(sectionId) {
-        sections.forEach(section => {
-            if (section.id === sectionId) {
-                section.style.display = 'block';
-                setTimeout(() => {
-                    section.classList.add('active-section');
-                    // Animar elementos dentro de la sección
-                    animateSectionElements(section);
-                }, 50);
-            } else {
-                section.classList.remove('active-section');
-                setTimeout(() => {
-                    section.style.display = 'none';
-                }, 500);
-            }
-        });
-    }
-    
-    // ===== ANIMAR ELEMENTOS DE SECCIÓN =====
-    function animateSectionElements(section) {
-        const animatedElements = section.querySelectorAll('.pdf-card, .video-card, .link-card, .stat-card, .gallery-item');
-        animatedElements.forEach((element, index) => {
-            element.style.opacity = '0';
-            element.style.transform = 'translateY(20px)';
-            
-            setTimeout(() => {
-                element.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                element.style.opacity = '1';
-                element.style.transform = 'translateY(0)';
-            }, 100 + (index * 100));
-        });
-    }
-    
-    // ===== CARRUSEL MEJORADO =====
-    function setupCarrusel() {
-        if (!carruselTrack || !prevBtn || !nextBtn) return;
-        
-        // Configurar dimensiones iniciales
-        updateCarruselDimensions();
-        
-        // Event listeners para botones
-        prevBtn.addEventListener('click', () => navigateCarrusel(-1));
-        nextBtn.addEventListener('click', () => navigateCarrusel(1));
-        
-        // Event listeners para indicadores
-        indicators.forEach((indicator, index) => {
-            indicator.addEventListener('click', () => goToSlide(index));
-        });
-        
-        // Navegación con teclado
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') navigateCarrusel(-1);
-            if (e.key === 'ArrowRight') navigateCarrusel(1);
-        });
-        
-        // Swipe para móviles
-        let touchStartX = 0;
-        let touchEndX = 0;
-        
-        carruselTrack.addEventListener('touchstart', (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-        });
-        
-        carruselTrack.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        });
-        
-        function handleSwipe() {
-            const swipeThreshold = 50;
-            const difference = touchStartX - touchEndX;
-            
-            if (Math.abs(difference) > swipeThreshold) {
-                if (difference > 0) {
-                    navigateCarrusel(1); // Swipe izquierda
-                } else {
-                    navigateCarrusel(-1); // Swipe derecha
-                }
-            }
+    // Función para cambiar entre modo día y noche
+    themeToggle.addEventListener('click', function() {
+        if (body.classList.contains('light-mode')) {
+            body.classList.remove('light-mode');
+            body.classList.add('dark-mode');
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i> Modo Día';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            body.classList.remove('dark-mode');
+            body.classList.add('light-mode');
+            themeToggle.innerHTML = '<i class="fas fa-moon"></i> Modo Noche';
+            localStorage.setItem('theme', 'light');
         }
-        
-        // Autoavance
-        startAutoAdvance();
-        
-        // Pausar autoavance al interactuar
-        const carruselContainer = document.querySelector('.carrusel-container-large');
-        if (carruselContainer) {
-            carruselContainer.addEventListener('mouseenter', pauseAutoAdvance);
-            carruselContainer.addEventListener('touchstart', pauseAutoAdvance);
-            carruselContainer.addEventListener('mouseleave', startAutoAdvance);
-        }
-        
-        // Actualizar dimensiones en resize
-        window.addEventListener('resize', updateCarruselDimensions);
-        
-        // Actualizar contador
-        updateSlideCounter();
-    }
-    
-    function navigateCarrusel(direction) {
-        if (isTransitioning || !carruselTrack) return;
-        
-        isTransitioning = true;
-        const newSlide = (currentSlide + direction + totalSlides) % totalSlides;
-        goToSlide(newSlide);
-        
-        setTimeout(() => {
-            isTransitioning = false;
-        }, 600);
-    }
-    
-    function goToSlide(slideIndex) {
-        currentSlide = slideIndex;
-        
-        // Actualizar posición del track
-        if (carruselTrack) {
-            carruselTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
-        }
-        
-        // Actualizar indicadores
-        indicators.forEach((indicator, index) => {
-            indicator.classList.toggle('active', index === currentSlide);
-        });
-        
-        // Actualizar contador
-        updateSlideCounter();
-        
-        // Restart auto advance
-        restartAutoAdvance();
-    }
-    
-    function updateSlideCounter() {
-        if (slideCounter) {
-            slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
-        }
-    }
-    
-    function updateCarruselDimensions() {
-        const container = document.querySelector('.carrusel-container-large');
-        const slides = document.querySelectorAll('.carrusel-slide-large');
-        
-        if (container && slides.length > 0) {
-            slides.forEach(slide => {
-                slide.style.minWidth = `${container.offsetWidth}px`;
-            });
-        }
-    }
-    
-    function startAutoAdvance() {
-        carruselInterval = setInterval(() => {
-            navigateCarrusel(1);
-        }, 7000); // 7 segundos
-    }
-    
-    function pauseAutoAdvance() {
-        clearInterval(carruselInterval);
-    }
-    
-    function restartAutoAdvance() {
-        pauseAutoAdvance();
-        startAutoAdvance();
-    }
-    
-    // ===== SCROLL TOP =====
-    function setupScrollTop() {
-        if (!scrollTopBtn) return;
-        
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 300) {
-                scrollTopBtn.classList.add('visible');
-            } else {
-                scrollTopBtn.classList.remove('visible');
-            }
-        });
-        
-        scrollTopBtn.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-    }
-    
-    // ===== TEMA OSCURO/CLARO =====
-    if (themeToggle) {
-        themeToggle.addEventListener('click', function() {
-            if (body.classList.contains('light-mode')) {
-                body.classList.remove('light-mode');
-                body.classList.add('dark-mode');
-                localStorage.setItem('theme', 'dark');
-                this.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
-            } else {
-                body.classList.remove('dark-mode');
-                body.classList.add('light-mode');
-                localStorage.setItem('theme', 'light');
-                this.innerHTML = '<i class="fas fa-moon"></i><span>Modo Noche</span>';
-            }
-        });
-    }
+    });
     
     // Cargar tema guardado
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         body.classList.remove('light-mode');
         body.classList.add('dark-mode');
-        if (themeToggle) {
-            themeToggle.innerHTML = '<i class="fas fa-sun"></i><span>Modo Día</span>';
-        }
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i> Modo Día';
     }
     
-    // ===== FORMULARIO DE CONTACTO =====
-    function setupFormValidation() {
-        if (!contactForm) return;
-        
-        contactForm.addEventListener('submit', function(e) {
+    // Navegación entre secciones
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
             e.preventDefault();
             
-            if (validateForm()) {
-                // Simular envío
-                simulateFormSubmission();
-            }
-        });
-        
-        // Validación en tiempo real
-        const inputs = contactForm.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-            input.addEventListener('blur', validateField);
-            input.addEventListener('input', clearError);
-        });
-    }
-    
-    function validateForm() {
-        if (!contactForm) return false;
-        
-        let isValid = true;
-        const inputs = contactForm.querySelectorAll('input, textarea, select');
-        
-        inputs.forEach(input => {
-            if (!validateField(input)) {
-                isValid = false;
-            }
-        });
-        
-        return isValid;
-    }
-    
-    function validateField(e) {
-        const field = e.target || e;
-        let isValid = true;
-        let errorMessage = '';
-        
-        // Limpiar error anterior
-        clearError(field);
-        
-        // Validar campo requerido
-        if (field.hasAttribute('required') && !field.value.trim()) {
-            isValid = false;
-            errorMessage = 'Este campo es requerido';
-        }
-        
-        // Validar email
-        if (field.type === 'email' && field.value.trim()) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(field.value)) {
-                isValid = false;
-                errorMessage = 'Ingresa un email válido';
-            }
-        }
-        
-        // Mostrar error si existe
-        if (!isValid) {
-            showError(field, errorMessage);
-        }
-        
-        return isValid;
-    }
-    
-    function showError(field, message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.textContent = message;
-        errorDiv.style.color = 'var(--primary-color)';
-        errorDiv.style.fontSize = '0.875rem';
-        errorDiv.style.marginTop = '0.25rem';
-        
-        field.parentNode.appendChild(errorDiv);
-        field.style.borderColor = 'var(--primary-color)';
-    }
-    
-    function clearError(e) {
-        const field = e.target || e;
-        const error = field.parentNode.querySelector('.error-message');
-        
-        if (error) {
-            error.remove();
-        }
-        
-        field.style.borderColor = '';
-    }
-    
-    function simulateFormSubmission() {
-        const submitBtn = contactForm.querySelector('.btn-submit');
-        if (!submitBtn) return;
-        
-        const originalText = submitBtn.innerHTML;
-        
-        // Mostrar estado de carga
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-        submitBtn.disabled = true;
-        
-        // Simular delay de red
-        setTimeout(() => {
-            // Mostrar mensaje de éxito
-            showNotification('¡Mensaje enviado con éxito! Te responderemos pronto.', 'success');
+            // Obtener el ID de la sección objetivo
+            const targetId = this.getAttribute('href').substring(1);
             
-            // Restaurar botón
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
+            // Actualizar enlace activo
+            navLinks.forEach(navLink => navLink.classList.remove('active'));
+            this.classList.add('active');
             
-            // Limpiar formulario
-            contactForm.reset();
-        }, 2000);
-    }
-    
-    // ===== NOTIFICACIONES =====
-    function showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
-            <span>${message}</span>
-            <button class="notification-close"><i class="fas fa-times"></i></button>
-        `;
-        
-        // Estilos de notificación
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? 'var(--accent-color)' : 'var(--primary-color)'};
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            box-shadow: var(--shadow-lg);
-            z-index: 1000;
-            animation: slideInRight 0.3s ease;
-            max-width: 90%;
-            word-wrap: break-word;
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Botón para cerrar
-        const closeBtn = notification.querySelector('.notification-close');
-        closeBtn.addEventListener('click', () => {
-            notification.style.animation = 'slideOutRight 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        });
-        
-        // Auto-remover después de 5 segundos
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.style.animation = 'slideOutRight 0.3s ease';
-                setTimeout(() => notification.remove(), 300);
-            }
-        }, 5000);
-    }
-    
-    // ===== ANIMACIONES =====
-    function setupAnimations() {
-        // Intersection Observer para animaciones al scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-        
-        if ('IntersectionObserver' in window) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('animated');
-                    }
-                });
-            }, observerOptions);
-            
-            // Observar elementos para animar
-            const animatableElements = document.querySelectorAll('.pdf-card, .video-card, .link-card, .stat-card, .gallery-item');
-            animatableElements.forEach(el => observer.observe(el));
-        }
-        
-        // Añadir estilos CSS para animaciones
-        const style = document.createElement('style');
-        style.textContent = `
-            .pdf-card, .video-card, .link-card, .stat-card, .gallery-item {
-                opacity: 0;
-                transform: translateY(30px);
-                transition: opacity 0.6s ease, transform 0.6s ease;
-            }
-            
-            .pdf-card.animated, .video-card.animated, .link-card.animated, .stat-card.animated, .gallery-item.animated {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            @keyframes slideOutRight {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-    
-    // ===== VISORES PDF =====
-    function setupPDFViewers() {
-        const pdfIframes = document.querySelectorAll('.pdf-preview iframe');
-        
-        pdfIframes.forEach(iframe => {
-            // Añadir mensaje de carga
-            iframe.onload = function() {
-                const parent = iframe.parentNode;
-                if (parent) {
-                    parent.classList.remove('loading');
+            // Mostrar sección activa
+            sections.forEach(section => {
+                section.classList.remove('active-section');
+                if (section.id === targetId) {
+                    section.classList.add('active-section');
                 }
-            };
-            
-            // Manejar errores
-            iframe.onerror = function() {
-                const parent = iframe.parentNode;
-                if (parent) {
-                    parent.classList.remove('loading');
-                    parent.innerHTML = `
-                        <div class="pdf-error">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <h4>No se pudo cargar el PDF</h4>
-                            <p>El archivo no está disponible o hubo un error al cargarlo.</p>
-                            <a href="${iframe.src}" class="btn" target="_blank">
-                                <i class="fas fa-external-link-alt"></i> Abrir en nueva pestaña
-                            </a>
-                        </div>
-                    `;
-                }
-            };
-        });
-    }
-    
-    // ===== REPRODUCTORES DE VIDEO =====
-    function setupVideoPlayers() {
-        const videos = document.querySelectorAll('video');
-        
-        videos.forEach(video => {
-            // Añadir controles personalizados si es necesario
-            video.addEventListener('play', () => {
-                video.parentNode.classList.add('playing');
             });
             
-            video.addEventListener('pause', () => {
-                video.parentNode.classList.remove('playing');
-            });
+            // Cerrar visor de PDF si está abierto
+            pdfViewerContainer.style.display = 'none';
             
-            // Prevenir autoplay en móviles
-            if (window.innerWidth <= 768) {
-                video.removeAttribute('autoplay');
-            }
+            // Desplazamiento suave hacia la sección
+            document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
         });
-    }
+    });
     
-    // ===== COMPORTAMIENTO RESPONSIVE =====
-    function setupResponsiveBehavior() {
-        // Ajustar texto del botón de tema en móviles
-        function adjustThemeButtonText() {
-            if (!themeToggle) return;
-            
-            if (window.innerWidth <= 768) {
-                // En móviles, solo mostrar icono
-                const icon = themeToggle.querySelector('i');
-                if (icon) {
-                    themeToggle.innerHTML = icon.outerHTML;
-                }
+    // Carrusel de imágenes
+    const carruselTrack = document.querySelector('.carrusel-track');
+    const carruselSlides = document.querySelectorAll('.carrusel-slide');
+    const prevBtn = document.querySelector('.carrusel-btn.prev');
+    const nextBtn = document.querySelector('.carrusel-btn.next');
+    const indicators = document.querySelectorAll('.indicator');
+    
+    let currentSlide = 0;
+    const totalSlides = carruselSlides.length;
+    
+    // Función para actualizar carrusel
+    function updateCarrusel() {
+        carruselTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+        
+        // Actualizar indicadores
+        indicators.forEach((indicator, index) => {
+            if (index === currentSlide) {
+                indicator.classList.add('active');
             } else {
-                // En escritorio, restaurar texto completo
-                const isDarkMode = body.classList.contains('dark-mode');
-                themeToggle.innerHTML = isDarkMode 
-                    ? '<i class="fas fa-sun"></i><span>Modo Día</span>'
-                    : '<i class="fas fa-moon"></i><span>Modo Noche</span>';
+                indicator.classList.remove('active');
             }
-        }
-        
-        // Ajustar menú en resize
-        function handleResize() {
-            adjustThemeButtonText();
-            
-            // Ocultar menú móvil en pantallas grandes
-            if (window.innerWidth > 768 && navMenu) {
-                navMenu.classList.remove('active');
-                if (menuToggle) {
-                    menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
-                }
-            }
-            
-            // Actualizar carrusel
-            updateCarruselDimensions();
-        }
-        
-        // Event listeners
-        window.addEventListener('resize', handleResize);
-        
-        // Inicializar
-        adjustThemeButtonText();
+        });
     }
     
-    // ===== INICIALIZAR TODO =====
-    init();
+    // Event listeners para botones del carrusel
+    prevBtn.addEventListener('click', () => {
+        currentSlide = (currentSlide > 0) ? currentSlide - 1 : totalSlides - 1;
+        updateCarrusel();
+    });
+    
+    nextBtn.addEventListener('click', () => {
+        currentSlide = (currentSlide < totalSlides - 1) ? currentSlide + 1 : 0;
+        updateCarrusel();
+    });
+    
+    // Event listeners para indicadores
+    indicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', () => {
+            currentSlide = index;
+            updateCarrusel();
+        });
+    });
+    
+    // Autoavance del carrusel
+    let carruselInterval = setInterval(() => {
+        currentSlide = (currentSlide < totalSlides - 1) ? currentSlide + 1 : 0;
+        updateCarrusel();
+    }, 5000);
+    
+    // Pausar autoavance al interactuar con el carrusel
+    const carruselContainer = document.querySelector('.carrusel');
+    carruselContainer.addEventListener('mouseenter', () => {
+        clearInterval(carruselInterval);
+    });
+    
+    carruselContainer.addEventListener('mouseleave', () => {
+        carruselInterval = setInterval(() => {
+            currentSlide = (currentSlide < totalSlides - 1) ? currentSlide + 1 : 0;
+            updateCarrusel();
+        }, 5000);
+    });
+    
+    // PDF Viewer - Simulación de visualización de PDFs
+    pdfButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const pdfName = this.getAttribute('data-pdf');
+            
+            // Actualizar título del PDF
+            pdfTitle.textContent = `Visualizando: ${this.parentElement.querySelector('h3').textContent}`;
+            
+            // Mostrar contenido simulado del PDF
+            pdfViewer.innerHTML = `
+                <div class="pdf-simulation">
+                    <h4>Contenido del PDF: ${pdfName}</h4>
+                    <p>Esta es una simulación del contenido del PDF. En una implementación real, aquí se mostraría el PDF usando la biblioteca PDF.js.</p>
+                    
+                    <div class="pdf-content">
+                        <h5>Introducción</h5>
+                        <p>Este documento contiene la actividad realizada durante el semestre. Incluye conceptos teóricos, ejemplos prácticos y ejercicios resueltos.</p>
+                        
+                        <h5>Contenido Principal</h5>
+                        <p>El desarrollo de esta actividad permitió aplicar los conocimientos adquiridos en clase y desarrollar habilidades prácticas en el área de tecnología.</p>
+                        
+                        <h5>Conclusiones</h5>
+                        <p>La actividad fue completada exitosamente, logrando los objetivos planteados inicialmente y obteniendo un aprendizaje significativo.</p>
+                    </div>
+                    
+                    <div class="pdf-actions">
+                        <button class="btn" onclick="alert('Descarga simulada del PDF')">
+                            <i class="fas fa-download"></i> Descargar PDF
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Mostrar el visor de PDF
+            pdfViewerContainer.style.display = 'block';
+            
+            // Desplazar hacia el visor
+            pdfViewerContainer.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+    
+    // Cerrar visor de PDF
+    closePdfBtn.addEventListener('click', function() {
+        pdfViewerContainer.style.display = 'none';
+    });
+    
+    // Formulario de contacto
+    contactForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Obtener valores del formulario
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const message = document.getElementById('message').value;
+        
+        // Simular envío del formulario
+        alert(`¡Gracias ${name}! Tu mensaje ha sido enviado. Te responderemos a ${email} en breve.`);
+        
+        // Limpiar formulario
+        contactForm.reset();
+    });
+    
+    // Efectos interactivos para botones
+    const allButtons = document.querySelectorAll('.btn');
+    allButtons.forEach(button => {
+        button.addEventListener('mousedown', function() {
+            this.style.transform = 'translateY(0)';
+        });
+        
+        button.addEventListener('mouseup', function() {
+            this.style.transform = 'translateY(-3px)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Cerrar menú al redimensionar la ventana (si se vuelve a tamaño de escritorio)
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            closeNavMenu();
+        }
+    });
+    
+    // Inicializar carrusel
+    updateCarrusel();
 });
