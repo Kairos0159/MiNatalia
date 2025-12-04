@@ -15,30 +15,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar año actual en el footer
     currentYear.textContent = new Date().getFullYear();
     
-    // Crear botón hamburguesa y overlay dinámicamente
+    // Crear elementos del menú hamburguesa
     const nav = document.querySelector('nav');
-    const navContainer = nav.querySelector('.container');
-    const navMenu = nav.querySelector('.nav-menu');
+    const navMenu = document.querySelector('.nav-menu');
+    const navContainer = document.querySelector('nav .container');
     
     // Crear botón hamburguesa
-    const navToggle = document.createElement('button');
-    navToggle.className = 'nav-toggle';
-    navToggle.innerHTML = '<i class="fas fa-bars"></i>';
-    navContainer.appendChild(navToggle);
+    const hamburgerBtn = document.createElement('button');
+    hamburgerBtn.className = 'nav-toggle';
+    hamburgerBtn.innerHTML = '<i class="fas fa-bars"></i>';
+    navContainer.appendChild(hamburgerBtn);
     
-    // Crear overlay para cerrar menú
-    const navOverlay = document.createElement('div');
-    navOverlay.className = 'nav-overlay';
-    document.body.appendChild(navOverlay);
+    // Crear overlay para el menú
+    const menuOverlay = document.createElement('div');
+    menuOverlay.className = 'menu-overlay';
+    document.body.appendChild(menuOverlay);
     
-    // Función para alternar menú hamburguesa
-    function toggleNavMenu() {
+    // Función para abrir/cerrar menú
+    function toggleMenu() {
         navMenu.classList.toggle('active');
-        navOverlay.classList.toggle('active');
-        document.body.style.overflow = navMenu.classList.contains('active') ? 'hidden' : 'auto';
+        menuOverlay.classList.toggle('active');
         
-        // Cambiar ícono del botón
-        const icon = navToggle.querySelector('i');
+        // Cambiar icono
+        const icon = hamburgerBtn.querySelector('i');
         if (navMenu.classList.contains('active')) {
             icon.className = 'fas fa-times';
         } else {
@@ -47,25 +46,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Función para cerrar menú
-    function closeNavMenu() {
+    function closeMenu() {
         navMenu.classList.remove('active');
-        navOverlay.classList.remove('active');
-        document.body.style.overflow = 'auto';
+        menuOverlay.classList.remove('active');
         
-        // Restaurar ícono del botón
-        const icon = navToggle.querySelector('i');
+        // Restaurar icono
+        const icon = hamburgerBtn.querySelector('i');
         icon.className = 'fas fa-bars';
     }
     
     // Event listeners para menú hamburguesa
-    navToggle.addEventListener('click', toggleNavMenu);
-    navOverlay.addEventListener('click', closeNavMenu);
+    hamburgerBtn.addEventListener('click', toggleMenu);
+    menuOverlay.addEventListener('click', closeMenu);
     
-    // Cerrar menú al hacer clic en un enlace (en móviles)
+    // Cerrar menú al hacer clic en un enlace (solo en móviles)
     navLinks.forEach(link => {
         link.addEventListener('click', () => {
             if (window.innerWidth <= 768) {
-                closeNavMenu();
+                closeMenu();
             }
         });
     });
@@ -76,22 +74,12 @@ document.addEventListener('DOMContentLoaded', function() {
             body.classList.remove('light-mode');
             body.classList.add('dark-mode');
             themeToggle.innerHTML = '<i class="fas fa-sun"></i> Modo Día';
-            localStorage.setItem('theme', 'dark');
         } else {
             body.classList.remove('dark-mode');
             body.classList.add('light-mode');
             themeToggle.innerHTML = '<i class="fas fa-moon"></i> Modo Noche';
-            localStorage.setItem('theme', 'light');
         }
     });
-    
-    // Cargar tema guardado
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        body.classList.remove('light-mode');
-        body.classList.add('dark-mode');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i> Modo Día';
-    }
     
     // Navegación entre secciones
     navLinks.forEach(link => {
@@ -191,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Actualizar título del PDF
             pdfTitle.textContent = `Visualizando: ${this.parentElement.querySelector('h3').textContent}`;
             
-            // Mostrar contenido simulado del PDF
+            // Mostrar contenido simulado del PDF (en un caso real usarías pdf.js para renderizar PDFs)
             pdfViewer.innerHTML = `
                 <div class="pdf-simulation">
                     <h4>Contenido del PDF: ${pdfName}</h4>
@@ -261,10 +249,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Cerrar menú al redimensionar la ventana (si se vuelve a tamaño de escritorio)
+    // Cerrar menú al redimensionar la ventana si vuelve a tamaño desktop
     window.addEventListener('resize', function() {
         if (window.innerWidth > 768) {
-            closeNavMenu();
+            closeMenu();
         }
     });
     
